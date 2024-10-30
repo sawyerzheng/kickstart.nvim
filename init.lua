@@ -26,7 +26,7 @@ What is Kickstart?
 
   Kickstart.nvim is a starting point for your own configuration.
     The goal is that you can read every line of code, top-to-bottom, understand
-    what your configuration is doing, and modify it to suit your needs.
+  what your configuration is doing, and modify it to suit your needs.
 
     Once you've done that, you can start exploring, configuring and tinkering to
     make Neovim your own! That might mean leaving Kickstart just the way it is for a while
@@ -91,7 +91,7 @@ vim.g.mapleader = ' '
 vim.g.maplocalleader = ' '
 
 -- Set to true if you have a Nerd Font installed and selected in the terminal
-vim.g.have_nerd_font = false
+vim.g.have_nerd_font = true
 
 -- [[ Setting options ]]
 -- See `:help vim.opt`
@@ -115,7 +115,18 @@ vim.opt.showmode = false
 --  Remove this option if you want your OS clipboard to remain independent.
 --  See `:help 'clipboard'`
 vim.schedule(function()
-  vim.opt.clipboard = 'unnamedplus'
+  -- vim.opt.clipboard = 'unnamedplus'
+  vim.g.clipboard = {
+    name = 'OSC 52',
+    copy = {
+      ['+'] = require('vim.ui.clipboard.osc52').copy '+',
+      ['*'] = require('vim.ui.clipboard.osc52').copy '*',
+    },
+    paste = {
+      ['+'] = require('vim.ui.clipboard.osc52').paste '+',
+      ['*'] = require('vim.ui.clipboard.osc52').paste '*',
+    },
+  }
 end)
 
 -- Enable break indent
@@ -215,6 +226,35 @@ if not (vim.uv or vim.loop).fs_stat(lazypath) then
   end
 end ---@diagnostic disable-next-line: undefined-field
 vim.opt.rtp:prepend(lazypath)
+
+vim.keymap.set('n', '<leader>a', ':', { desc = 'command mode' })
+vim.keymap.set('n', '<leader>;', ':w<CR>', { desc = 'command mode' })
+vim.keymap.set('n', '<leader>q', ':q<CR>', { desc = 'command mode' })
+-- delete word
+vim.keymap.set('i', '<C-BS>', '<C-W>', { noremap = true, desc = 'delete backword one word' })
+vim.keymap.set('n', '<C-BS>', '<C-\\><C-i><C-W>', { noremap = true })
+vim.keymap.set('i', '<M-d>', '<C-\\><C-O>de', { noremap = true, desc = 'delete forward one word' })
+vim.keymap.set('n', '<M-d>', 'de', { noremap = true, desc = 'delete forward one word' })
+-- kill buffer
+vim.keymap.set('n', '<leader>u', '<cmd>bd<CR>', { desc = 'Kill buffer' })
+-- redo
+vim.keymap.set('n', 'U', '<cmd>redo<CR>', { desc = 'redo' })
+-- disable q command, recording
+vim.keymap.set('n', 'q', '<Nop>', { noremap = true, silent = true })
+-- kill window
+vim.keymap.set('n', '\\', '<C-w>c', { desc = 'kill window, not kill buffer' })
+-- max current window
+vim.keymap.set('n', '`', '<C-w>o', { desc = 'max window' })
+-- split window
+vim.keymap.set('n', '|', '<C-w>v', { desc = 'vertical split window' })
+vim.keymap.set('n', '=', '<C-w>s', { desc = 'horizontal split window' })
+-- switch window
+vim.keymap.set('n', '<M-o>', '<C-w><C-w>', { desc = 'switch to other window' })
+vim.keymap.set('n', '<M-O>', '<C-w><C-r>', { desc = 'swap window position' })
+-- toggle wrap
+vim.keymap.set('n', '<leader>l.', function()
+  vim.wo.wrap = not vim.wo.wrap
+end, { desc = 'swap window position' })
 
 -- [[ Configure and install plugins ]]
 --
@@ -321,6 +361,7 @@ require('lazy').setup({
         { '<leader>w', group = '[W]orkspace' },
         { '<leader>t', group = '[T]oggle' },
         { '<leader>h', group = 'Git [H]unk', mode = { 'n', 'v' } },
+        { '<leader>l', group = 'app[L]ications' },
       },
     },
   },
@@ -351,10 +392,76 @@ require('lazy').setup({
           return vim.fn.executable 'make' == 1
         end,
       },
+      {
+        'stevearc/aerial.nvim',
+        opts = {},
+        -- Optional dependencies
+        dependencies = {
+          'nvim-treesitter/nvim-treesitter',
+          'nvim-tree/nvim-web-devicons',
+        },
+      },
       { 'nvim-telescope/telescope-ui-select.nvim' },
 
       -- Useful for getting pretty icons, but requires a Nerd Font.
       { 'nvim-tree/nvim-web-devicons', enabled = vim.g.have_nerd_font },
+      {
+        'nvim-telescope/telescope-project.nvim',
+        config = function()
+          local project_actions = require 'telescope._extensions.project.actions'
+          require('telescope').setup {
+            extensions = {
+              project = {
+                base_dirs = {
+                  '~/source',
+                  -- { '~/dev/src2' },
+                  -- { '~/dev/src3', max_depth = 4 },
+                  -- { path = '~/dev/src4' },
+                  -- { path = '~/dev/src5', max_depth = 2 },
+                },
+                hidden_files = true, -- default: false
+                theme = 'dropdown',
+                order_by = 'asc',
+                search_by = 'title',
+                sync_with_nvim_tree = true, -- default false
+                -- default for on_project_selected = find project files
+                on_project_selected = function(prompt_bufnr)
+                  -- Do anything you want in here. For example:
+                  project_actions.change_working_directory(prompt_bufnr, false)
+                  require('harpoon.ui').nav_file(1)
+                end,
+                mappings = {
+                  n = {
+                    ['d'] = project_actions.delete_project,
+                    ['r'] = project_actions.rename_project,
+                    ['c'] = project_actions.add_project,
+                    ['C'] = project_actions.add_project_cwd,
+                    ['f'] = project_actions.find_project_files,
+                    ['b'] = project_actions.browse_project_files,
+                    ['s'] = project_actions.search_in_project_files,
+                    ['R'] = project_actions.recent_project_files,
+                    ['w'] = project_actions.change_working_directory,
+                    ['o'] = project_actions.next_cd_scope,
+                  },
+                  i = {
+                    ['<c-d>'] = project_actions.delete_project,
+                    ['<c-v>'] = project_actions.rename_project,
+                    ['<c-a>'] = project_actions.add_project,
+                    ['<c-A>'] = project_actions.add_project_cwd,
+                    ['<c-f>'] = project_actions.find_project_files,
+                    ['<c-b>'] = project_actions.browse_project_files,
+                    ['<c-s>'] = project_actions.search_in_project_files,
+                    ['<c-r>'] = project_actions.recent_project_files,
+                    ['<c-l>'] = project_actions.change_working_directory,
+                    ['<c-o>'] = project_actions.next_cd_scope,
+                    ['<c-w>'] = project_actions.change_workspace,
+                  },
+                },
+              },
+            },
+          }
+        end,
+      },
     },
     config = function()
       -- Telescope is a fuzzy finder that comes with a lot of different things that
@@ -392,12 +499,30 @@ require('lazy').setup({
           ['ui-select'] = {
             require('telescope.themes').get_dropdown(),
           },
+          aerial = {
+            -- Set the width of the first two columns (the second
+            -- is relevant only when show_columns is set to 'both')
+            col1_width = 4,
+            col2_width = 30,
+            -- How to format the symbols
+            format_symbol = function(symbol_path, filetype)
+              if filetype == 'json' or filetype == 'yaml' then
+                return table.concat(symbol_path, '.')
+              else
+                return symbol_path[#symbol_path]
+              end
+            end,
+            -- Available modes: symbols, lines, both
+            show_columns = 'both',
+          },
         },
       }
 
       -- Enable Telescope extensions if they are installed
       pcall(require('telescope').load_extension, 'fzf')
       pcall(require('telescope').load_extension, 'ui-select')
+      pcall(require('telescope').load_extension, 'project')
+      pcall(require('telescope').load_extension 'aerial')
 
       -- See `:help telescope.builtin`
       local builtin = require 'telescope.builtin'
@@ -408,10 +533,25 @@ require('lazy').setup({
       vim.keymap.set('n', '<leader>sw', builtin.grep_string, { desc = '[S]earch current [W]ord' })
       vim.keymap.set('n', '<leader>sg', builtin.live_grep, { desc = '[S]earch by [G]rep' })
       vim.keymap.set('n', '<leader>sd', builtin.diagnostics, { desc = '[S]earch [D]iagnostics' })
-      vim.keymap.set('n', '<leader>sr', builtin.resume, { desc = '[S]earch [R]esume' })
-      vim.keymap.set('n', '<leader>s.', builtin.oldfiles, { desc = '[S]earch Recent Files ("." for repeat)' })
+      vim.keymap.set('n', '<leader>s.', builtin.resume, { desc = '[S]earch [R]esume' })
+      vim.keymap.set('n', '<leader>sr', builtin.oldfiles, { desc = '[S]earch Recent Files ("." for repeat)' })
+      vim.keymap.set('n', '<leader>f', builtin.buffers, { desc = 'Telescope buffers' })
+      vim.keymap.set('n', '<leader>p', function()
+        require('telescope').extensions.project.project {}
+      end, { desc = '[P]roject' })
+      vim.keymap.set('n', '<leader>tT', builtin.colorscheme, { desc = '[T]oggle color[T]hemes' })
       vim.keymap.set('n', '<leader><leader>', builtin.buffers, { desc = '[ ] Find existing buffers' })
 
+      -- imenu
+      vim.keymap.set('n', '<leader>si', function()
+        require('telescope').extensions.aerial.aerial()
+      end)
+
+      vim.keymap.set('n', 'qi', function()
+        require('telescope').extensions.aerial.aerial()
+      end)
+      -- search buffer
+      vim.keymap.set('n', 'qq', builtin.grep_string, { desc = '[S]earch current [W]ord' })
       -- Slightly advanced example of overriding default behavior and theme
       vim.keymap.set('n', '<leader>/', function()
         -- You can pass additional configuration to Telescope to change the theme, layout, etc.
@@ -608,7 +748,7 @@ require('lazy').setup({
         -- clangd = {},
         -- gopls = {},
         -- pyright = {},
-        -- rust_analyzer = {},
+        rust_analyzer = {},
         -- ... etc. See `:help lspconfig-all` for a list of all the pre-configured LSPs
         --
         -- Some languages (like typescript) have entire language plugins that can be useful:
@@ -650,6 +790,17 @@ require('lazy').setup({
       })
       require('mason-tool-installer').setup { ensure_installed = ensure_installed }
 
+      require('lspconfig').basedpyright.setup {}
+      require('lspconfig').rust_analyzer.setup {
+        settings = {
+          ['rust-analyzer'] = {
+            diagnostics = {
+              enable = false,
+            },
+          },
+        },
+      }
+
       require('mason-lspconfig').setup {
         handlers = {
           function(server_name)
@@ -665,13 +816,961 @@ require('lazy').setup({
     end,
   },
 
+  -- python environment
+  {
+    'kmontocam/nvim-conda',
+    dependencies = { 'nvim-lua/plenary.nvim' },
+  },
+  {
+    'linux-cultist/venv-selector.nvim',
+    dependencies = {
+      'neovim/nvim-lspconfig',
+      'mfussenegger/nvim-dap',
+      'mfussenegger/nvim-dap-python', --optional
+      { 'nvim-telescope/telescope.nvim', branch = '0.1.x', dependencies = { 'nvim-lua/plenary.nvim' } },
+    },
+    lazy = false,
+    branch = 'regexp', -- This is the regexp branch, use this for the new version
+    config = function()
+      require('venv-selector').setup {
+        settings = {
+          search = {
+            my_venvs = {
+              command = "fd 'python$' /home/sawyer/.local/share/pdm/venvs/|grep 'bin/python$' | sed 's/\\/bin\\/python//g'",
+            },
+          },
+        },
+      }
+    end,
+    keys = {
+      { '<leader>lv', '<cmd>VenvSelect<cr>' },
+    },
+  },
+  -- use jk as escape key
+  {
+    'max397574/better-escape.nvim',
+    config = function()
+      require('better_escape').setup()
+    end,
+  },
+  {
+    'rmagatti/auto-session',
+    lazy = false,
+
+    ---enables autocomplete for opts
+    ---@module "auto-session"
+    ---@type AutoSession.Config
+    opts = {
+      suppressed_dirs = { '~/.local/', '~/tmp', '~/Downloads' },
+      -- log_level = 'debug',
+    },
+    config = function()
+      vim.o.sessionoptions = 'blank,buffers,curdir,folds,help,tabpages,winsize,winpos,terminal,localoptions'
+      require('auto-session').setup {
+        enabled = true, -- Enables/disables auto creating, saving and restoring
+        root_dir = vim.fn.stdpath 'data' .. '/sessions/', -- Root dir where sessions will be stored
+        auto_save = true, -- Enables/disables auto saving session on exit
+        auto_restore = true, -- Enables/disables auto restoring session on start
+        auto_create = true, -- Enables/disables auto creating new session files. Can take a function that should return true/false if a new session file should be created or not
+        suppressed_dirs = nil, -- Suppress session restore/create in certain directories
+        allowed_dirs = nil, -- Allow session restore/create in certain directories
+        auto_restore_last_session = false, -- On startup, loads the last saved session if session for cwd does not exist
+        use_git_branch = false, -- Include git branch name in session name
+        lazy_support = true, -- Automatically detect if Lazy.nvim is being used and wait until Lazy is done to make sure session is restored correctly. Does nothing if Lazy isn't being used. Can be disabled if a problem is suspected or for debugging
+        bypass_save_filetypes = nil, -- List of file types to bypass auto save when the only buffer open is one of the file types listed, useful to ignore dashboards
+        close_unsupported_windows = true, -- Close windows that aren't backed by normal file before autosaving a session
+        args_allow_single_directory = true, -- Follow normal sesion save/load logic if launched with a single directory as the only argument
+        args_allow_files_auto_save = false, -- Allow saving a session even when launched with a file argument (or multiple files/dirs). It does not load any existing session first. While you can just set this to true, you probably want to set it to a function that decides when to save a session when launched with file args. See documentation for more detail
+        continue_restore_on_error = true, -- Keep loading the session even if there's an error
+        cwd_change_handling = false, -- Follow cwd changes, saving a session before change and restoring after
+        log_level = 'error', -- Sets the log level of the plugin (debug, info, warn, error).
+
+        session_lens = {
+          load_on_setup = true, -- Initialize on startup (requires Telescope)
+          theme_conf = { -- Pass through for Telescope theme options
+            -- layout_config = { -- As one example, can change width/height of picker
+            --   width = 0.8,    -- percent of window
+            --   height = 0.5,
+            -- },
+          },
+          previewer = false, -- File preview for session picker
+
+          mappings = {
+            -- Mode can be a string or a table, e.g. {"i", "n"} for both insert and normal mode
+            delete_session = { 'i', '<C-D>' },
+            alternate_session = { 'i', '<C-S>' },
+            copy_session = { 'i', '<C-Y>' },
+          },
+
+          session_control = {
+            control_dir = vim.fn.stdpath 'data' .. '/auto_session/', -- Auto session control dir, for control files, like alternating between two sessions with session-lens
+            control_filename = 'session_control.json', -- File name of the session control file
+          },
+        },
+      }
+    end,
+  },
+  { -- This plugin
+    'Zeioth/compiler.nvim',
+    event = 'VeryLazy',
+    -- cmd = { 'CompilerOpen', 'CompilerToggleResults', 'CompilerRedo' },
+    dependencies = { 'stevearc/overseer.nvim', 'nvim-telescope/telescope.nvim' },
+    opts = {},
+    config = function()
+      require('compiler').setup {}
+      -- Open compiler
+      vim.api.nvim_set_keymap('n', '<F6>', '<cmd>CompilerOpen<cr>', { noremap = true, silent = true })
+
+      -- Redo last selected option
+      vim.api.nvim_set_keymap(
+        'n',
+        '<S-F6>',
+        '<cmd>CompilerStop<cr>' -- (Optional, to dispose all tasks before redo)
+          .. '<cmd>CompilerRedo<cr>',
+        { noremap = true, silent = true }
+      )
+
+      -- Toggle compiler results
+      vim.api.nvim_set_keymap('n', '<S-F7>', '<cmd>CompilerToggleResults<cr>', { noremap = true, silent = true })
+    end,
+  },
+  { -- The task runner we use
+    'stevearc/overseer.nvim',
+    commit = '6271cab7ccc4ca840faa93f54440ffae3a3918bd',
+    cmd = { 'CompilerOpen', 'CompilerToggleResults', 'CompilerRedo' },
+    opts = {
+      task_list = {
+        direction = 'bottom',
+        min_height = 25,
+        max_height = 25,
+        default_detail = 1,
+      },
+    },
+  },
+  {
+    'nvim-tree/nvim-tree.lua',
+    opts = {},
+    config = function()
+      -- disable netrw at the very start of your init.lua
+      vim.g.loaded_netrw = 1
+      vim.g.loaded_netrwPlugin = 1
+
+      -- optionally enable 24-bit colour
+      vim.opt.termguicolors = true
+
+      local function my_on_attach(bufnr)
+        local api = require 'nvim-tree.api'
+
+        local function opts(desc)
+          return { desc = 'nvim-tree: ' .. desc, buffer = bufnr, noremap = true, silent = true, nowait = true }
+        end
+
+        -- default mappings
+        api.config.mappings.default_on_attach(bufnr)
+
+        -- custom mappings
+        vim.keymap.set('n', '<C-t>', api.tree.change_root_to_parent, opts 'Up')
+        vim.keymap.set('n', '?', api.tree.toggle_help, opts 'Help')
+      end
+
+      -- empty setup using defaults
+      -- require("nvim-tree").setup()
+
+      -- OR setup with some options
+      local nvim_tree_api = require('nvim-tree').setup {
+        sort = {
+          sorter = 'case_sensitive',
+        },
+        view = {
+          width = 30,
+        },
+        renderer = {
+          group_empty = true,
+        },
+        filters = {
+          dotfiles = true,
+        },
+        on_attach = my_on_attach,
+      }
+    end,
+    vim.keymap.set('n', '<leader>tt', '<cmd>NvimTreeToggle<CR>', { desc = '[T]oggle nvim-[T]ree' }),
+  },
+  { -- folding
+    'kevinhwang91/nvim-ufo',
+    dependencies = { 'kevinhwang91/promise-async' },
+    opts = {},
+    config = function()
+      vim.o.foldcolumn = '1' -- '0' is not bad
+      vim.o.foldlevel = 99 -- Using ufo provider need a large value, feel free to decrease the value
+      vim.o.foldlevelstart = 99
+      vim.o.foldenable = true
+
+      vim.keymap.set('n', 'zR', require('ufo').openAllFolds)
+      vim.keymap.set('n', 'zM', require('ufo').closeAllFolds)
+
+      require('ufo').setup {
+        provider_selector = function(bufnr, filetype, buftype)
+          return { 'treesitter', 'indent' }
+        end,
+      }
+
+      require('ufo').setup()
+    end,
+  },
+  --  {
+  --    'ggandor/leap.nvim',
+  --    enabled = true,
+  --    keys = {
+  --      { 's', mode = { 'n', 'x', 'o' }, desc = 'Leap Forward to' },
+  --      { 'S', mode = { 'n', 'x', 'o' }, desc = 'Leap Backward to' },
+  --      { 'gs', mode = { 'n', 'x', 'o' }, desc = 'Leap from Windows' },
+  --    },
+  --    config = function(_, opts)
+  --      local leap = require 'leap'
+  --      for k, v in pairs(opts) do
+  --        leap.opts[k] = v
+  --      end
+  --      leap.add_default_mappings(true)
+  --      vim.keymap.del({ 'x', 'o' }, 'x')
+  --      vim.keymap.del({ 'x', 'o' }, 'X')
+  --    end,
+  --  },
+  { 'tpope/vim-repeat', event = 'VeryLazy' },
+  {
+    'windwp/nvim-autopairs',
+    event = 'InsertEnter',
+    config = true,
+    -- use opts = {} for passing setup options
+    -- this is equivalent to setup({}) function
+  },
+  {
+    'stevearc/aerial.nvim',
+    opts = {},
+    -- Optional dependencies
+    dependencies = {
+      'nvim-treesitter/nvim-treesitter',
+      'nvim-tree/nvim-web-devicons',
+    },
+    config = function()
+      require('aerial').setup {
+        -- optionally use on_attach to set keymaps when aerial has attached to a buffer
+        backends = { 'treesitter', 'lsp', 'markdown', 'asciidoc', 'man' },
+        on_attach = function(bufnr)
+          -- Jump forwards/backwards with '{' and '}'
+          vim.keymap.set('n', '{', '<cmd>AerialPrev<CR>', { buffer = bufnr })
+          vim.keymap.set('n', '}', '<cmd>AerialNext<CR>', { buffer = bufnr })
+        end,
+
+        layout = {
+          -- These control the width of the aerial window.
+          -- They can be integers or a float between 0 and 1 (e.g. 0.4 for 40%)
+          -- min_width and max_width can be a list of mixed types.
+          -- max_width = {40, 0.2} means "the lesser of 40 columns or 20% of total"
+          max_width = { 40, 0.2 },
+          width = nil,
+          min_width = 10,
+
+          -- key-value pairs of window-local options for aerial window (e.g. winhl)
+          win_opts = {},
+
+          -- Determines the default direction to open the aerial window. The 'prefer'
+          -- options will open the window in the other direction *if* there is a
+          -- different buffer in the way of the preferred direction
+          -- Enum: prefer_right, prefer_left, right, left, float
+          default_direction = 'prefer_right',
+
+          -- Determines where the aerial window will be opened
+          --   edge   - open aerial at the far right/left of the editor
+          --   window - open aerial to the right/left of the current window
+          placement = 'window',
+
+          -- When the symbols change, resize the aerial window (within min/max constraints) to fit
+          resize_to_content = true,
+
+          -- Preserve window size equality with (:help CTRL-W_=)
+          preserve_equality = false,
+        },
+
+        -- Determines how the aerial window decides which buffer to display symbols for
+        --   window - aerial window will display symbols for the buffer in the window from which it was opened
+        --   global - aerial window will display symbols for the current window
+        attach_mode = 'window',
+
+        -- List of enum values that configure when to auto-close the aerial window
+        --   unfocus       - close aerial when you leave the original source window
+        --   switch_buffer - close aerial when you change buffers in the source window
+        --   unsupported   - close aerial when attaching to a buffer that has no symbol source
+        close_automatic_events = {},
+
+        -- Keymaps in aerial window. Can be any value that `vim.keymap.set` accepts OR a table of keymap
+        -- options with a `callback` (e.g. { callback = function() ... end, desc = "", nowait = true })
+        -- Additionally, if it is a string that matches "actions.<name>",
+        -- it will use the mapping at require("aerial.actions").<name>
+        -- Set to `false` to remove a keymap
+        keymaps = {
+          ['?'] = 'actions.show_help',
+          ['g?'] = 'actions.show_help',
+          ['<CR>'] = 'actions.jump',
+          ['<2-LeftMouse>'] = 'actions.jump',
+          ['<C-v>'] = 'actions.jump_vsplit',
+          ['<C-s>'] = 'actions.jump_split',
+          ['p'] = 'actions.scroll',
+          ['<C-j>'] = 'actions.down_and_scroll',
+          ['<C-k>'] = 'actions.up_and_scroll',
+          ['{'] = 'actions.prev',
+          ['}'] = 'actions.next',
+          ['[['] = 'actions.prev_up',
+          [']]'] = 'actions.next_up',
+          ['q'] = 'actions.close',
+          ['o'] = 'actions.tree_toggle',
+          ['za'] = 'actions.tree_toggle',
+          ['O'] = 'actions.tree_toggle_recursive',
+          ['zA'] = 'actions.tree_toggle_recursive',
+          ['l'] = 'actions.tree_open',
+          ['zo'] = 'actions.tree_open',
+          ['L'] = 'actions.tree_open_recursive',
+          ['zO'] = 'actions.tree_open_recursive',
+          ['h'] = 'actions.tree_close',
+          ['zc'] = 'actions.tree_close',
+          ['H'] = 'actions.tree_close_recursive',
+          ['zC'] = 'actions.tree_close_recursive',
+          ['zr'] = 'actions.tree_increase_fold_level',
+          ['zR'] = 'actions.tree_open_all',
+          ['zm'] = 'actions.tree_decrease_fold_level',
+          ['zM'] = 'actions.tree_close_all',
+          ['zx'] = 'actions.tree_sync_folds',
+          ['zX'] = 'actions.tree_sync_folds',
+        },
+
+        -- When true, don't load aerial until a command or function is called
+        -- Defaults to true, unless `on_attach` is provided, then it defaults to false
+        lazy_load = true,
+
+        -- Disable aerial on files with this many lines
+        disable_max_lines = 10000,
+
+        -- Disable aerial on files this size or larger (in bytes)
+        disable_max_size = 2000000, -- Default 2MB
+
+        -- A list of all symbols to display. Set to false to display all symbols.
+        -- This can be a filetype map (see :help aerial-filetype-map)
+        -- To see all available values, see :help SymbolKind
+        filter_kind = {
+          'Class',
+          'Constructor',
+          'Enum',
+          'Function',
+          'Interface',
+          'Module',
+          'Method',
+          'Struct',
+        },
+
+        -- Determines line highlighting mode when multiple splits are visible.
+        -- split_width   Each open window will have its cursor location marked in the
+        --               aerial buffer. Each line will only be partially highlighted
+        --               to indicate which window is at that location.
+        -- full_width    Each open window will have its cursor location marked as a
+        --               full-width highlight in the aerial buffer.
+        -- last          Only the most-recently focused window will have its location
+        --               marked in the aerial buffer.
+        -- none          Do not show the cursor locations in the aerial window.
+        highlight_mode = 'split_width',
+
+        -- Highlight the closest symbol if the cursor is not exactly on one.
+        highlight_closest = true,
+
+        -- Highlight the symbol in the source buffer when cursor is in the aerial win
+        highlight_on_hover = false,
+
+        -- When jumping to a symbol, highlight the line for this many ms.
+        -- Set to false to disable
+        highlight_on_jump = 300,
+
+        -- Jump to symbol in source window when the cursor moves
+        autojump = false,
+
+        -- Define symbol icons. You can also specify "<Symbol>Collapsed" to change the
+        -- icon when the tree is collapsed at that symbol, or "Collapsed" to specify a
+        -- default collapsed icon. The default icon set is determined by the
+        -- "nerd_font" option below.
+        -- If you have lspkind-nvim installed, it will be the default icon set.
+        -- This can be a filetype map (see :help aerial-filetype-map)
+        icons = {},
+
+        -- Control which windows and buffers aerial should ignore.
+        -- Aerial will not open when these are focused, and existing aerial windows will not be updated
+        ignore = {
+          -- Ignore unlisted buffers. See :help buflisted
+          unlisted_buffers = false,
+
+          -- Ignore diff windows (setting to false will allow aerial in diff windows)
+          diff_windows = true,
+
+          -- List of filetypes to ignore.
+          filetypes = {},
+
+          -- Ignored buftypes.
+          -- Can be one of the following:
+          -- false or nil - No buftypes are ignored.
+          -- "special"    - All buffers other than normal, help and man page buffers are ignored.
+          -- table        - A list of buftypes to ignore. See :help buftype for the
+          --                possible values.
+          -- function     - A function that returns true if the buffer should be
+          --                ignored or false if it should not be ignored.
+          --                Takes two arguments, `bufnr` and `buftype`.
+          buftypes = 'special',
+
+          -- Ignored wintypes.
+          -- Can be one of the following:
+          -- false or nil - No wintypes are ignored.
+          -- "special"    - All windows other than normal windows are ignored.
+          -- table        - A list of wintypes to ignore. See :help win_gettype() for the
+          --                possible values.
+          -- function     - A function that returns true if the window should be
+          --                ignored or false if it should not be ignored.
+          --                Takes two arguments, `winid` and `wintype`.
+          wintypes = 'special',
+        },
+
+        -- Use symbol tree for folding. Set to true or false to enable/disable
+        -- Set to "auto" to manage folds if your previous foldmethod was 'manual'
+        -- This can be a filetype map (see :help aerial-filetype-map)
+        manage_folds = false,
+
+        -- When you fold code with za, zo, or zc, update the aerial tree as well.
+        -- Only works when manage_folds = true
+        link_folds_to_tree = false,
+
+        -- Fold code when you open/collapse symbols in the tree.
+        -- Only works when manage_folds = true
+        link_tree_to_folds = true,
+
+        -- Set default symbol icons to use patched font icons (see https://www.nerdfonts.com/)
+        -- "auto" will set it to true if nvim-web-devicons or lspkind-nvim is installed.
+        nerd_font = 'auto',
+
+        -- Call this function when aerial attaches to a buffer.
+        on_attach = function(bufnr) end,
+
+        -- Call this function when aerial first sets symbols on a buffer.
+        on_first_symbols = function(bufnr) end,
+
+        -- Automatically open aerial when entering supported buffers.
+        -- This can be a function (see :help aerial-open-automatic)
+        open_automatic = false,
+
+        -- Run this command after jumping to a symbol (false will disable)
+        post_jump_cmd = 'normal! zz',
+
+        -- Invoked after each symbol is parsed, can be used to modify the parsed item,
+        -- or to filter it by returning false.
+        --
+        -- bufnr: a neovim buffer number
+        -- item: of type aerial.Symbol
+        -- ctx: a record containing the following fields:
+        --   * backend_name: treesitter, lsp, man...
+        --   * lang: info about the language
+        --   * symbols?: specific to the lsp backend
+        --   * symbol?: specific to the lsp backend
+        --   * syntax_tree?: specific to the treesitter backend
+        --   * match?: specific to the treesitter backend, TS query match
+        post_parse_symbol = function(bufnr, item, ctx)
+          return true
+        end,
+
+        -- Invoked after all symbols have been parsed and post-processed,
+        -- allows to modify the symbol structure before final display
+        --
+        -- bufnr: a neovim buffer number
+        -- items: a collection of aerial.Symbol items, organized in a tree,
+        --        with 'parent' and 'children' fields
+        -- ctx: a record containing the following fields:
+        --   * backend_name: treesitter, lsp, man...
+        --   * lang: info about the language
+        --   * symbols?: specific to the lsp backend
+        --   * syntax_tree?: specific to the treesitter backend
+        post_add_all_symbols = function(bufnr, items, ctx)
+          return items
+        end,
+
+        -- When true, aerial will automatically close after jumping to a symbol
+        close_on_select = false,
+
+        -- The autocmds that trigger symbols update (not used for LSP backend)
+        update_events = 'TextChanged,InsertLeave',
+
+        -- Show box drawing characters for the tree hierarchy
+        show_guides = false,
+
+        -- Customize the characters used when show_guides = true
+        guides = {
+          -- When the child item has a sibling below it
+          mid_item = '├─',
+          -- When the child item is the last in the list
+          last_item = '└─',
+          -- When there are nested child guides to the right
+          nested_top = '│ ',
+          -- Raw indentation
+          whitespace = '  ',
+        },
+
+        -- Set this function to override the highlight groups for certain symbols
+        get_highlight = function(symbol, is_icon, is_collapsed)
+          -- return "MyHighlight" .. symbol.kind
+        end,
+
+        -- Options for opening aerial in a floating win
+        float = {
+          -- Controls border appearance. Passed to nvim_open_win
+          border = 'rounded',
+
+          -- Determines location of floating window
+          --   cursor - Opens float on top of the cursor
+          --   editor - Opens float centered in the editor
+          --   win    - Opens float centered in the window
+          relative = 'cursor',
+
+          -- These control the height of the floating window.
+          -- They can be integers or a float between 0 and 1 (e.g. 0.4 for 40%)
+          -- min_height and max_height can be a list of mixed types.
+          -- min_height = {8, 0.1} means "the greater of 8 rows or 10% of total"
+          max_height = 0.9,
+          height = nil,
+          min_height = { 8, 0.1 },
+
+          override = function(conf, source_winid)
+            -- This is the config that will be passed to nvim_open_win.
+            -- Change values here to customize the layout
+            return conf
+          end,
+        },
+
+        -- Options for the floating nav windows
+        nav = {
+          border = 'rounded',
+          max_height = 0.9,
+          min_height = { 10, 0.1 },
+          max_width = 0.5,
+          min_width = { 0.2, 20 },
+          win_opts = {
+            cursorline = true,
+            winblend = 10,
+          },
+          -- Jump to symbol in source window when the cursor moves
+          autojump = false,
+          -- Show a preview of the code in the right column, when there are no child symbols
+          preview = false,
+          -- Keymaps in the nav window
+          keymaps = {
+            ['<CR>'] = 'actions.jump',
+            ['<2-LeftMouse>'] = 'actions.jump',
+            ['<C-v>'] = 'actions.jump_vsplit',
+            ['<C-s>'] = 'actions.jump_split',
+            ['h'] = 'actions.left',
+            ['l'] = 'actions.right',
+            ['<C-c>'] = 'actions.close',
+          },
+        },
+
+        lsp = {
+          -- If true, fetch document symbols when LSP diagnostics update.
+          diagnostics_trigger_update = false,
+
+          -- Set to false to not update the symbols when there are LSP errors
+          update_when_errors = true,
+
+          -- How long to wait (in ms) after a buffer change before updating
+          -- Only used when diagnostics_trigger_update = false
+          update_delay = 300,
+
+          -- Map of LSP client name to priority. Default value is 10.
+          -- Clients with higher (larger) priority will be used before those with lower priority.
+          -- Set to -1 to never use the client.
+          priority = {
+            -- pyright = 10,
+          },
+        },
+
+        treesitter = {
+          -- How long to wait (in ms) after a buffer change before updating
+          update_delay = 300,
+        },
+
+        markdown = {
+          -- How long to wait (in ms) after a buffer change before updating
+          update_delay = 300,
+        },
+
+        asciidoc = {
+          -- How long to wait (in ms) after a buffer change before updating
+          update_delay = 300,
+        },
+
+        man = {
+          -- How long to wait (in ms) after a buffer change before updating
+          update_delay = 300,
+        },
+      }
+      -- You probably also want to set a keymap to toggle aerial
+      vim.keymap.set('n', '<leader>li', '<cmd>AerialToggle!<CR>')
+    end,
+  },
+  { -- switch window like ace-window
+    'yorickpeterse/nvim-window',
+    keys = {
+      { ',', "<cmd>lua require('nvim-window').pick()<cr>", desc = 'nvim-window: Jump to window' },
+    },
+    config = true,
+  },
+  { -- dired
+    'X3eRo0/dired.nvim',
+    dependencies = 'MunifTanjim/nui.nvim',
+    config = function()
+      dired_api = require('dired').setup {
+        path_separator = '/',
+        show_banner = false,
+        show_icons = false,
+        show_hidden = true,
+        show_dot_dirs = true,
+        show_colors = true,
+      }
+      vim.keymap.set('n', '<leader>ld', '<cmd>Dired<CR>', { desc = 'Dired' })
+    end,
+  },
+  { -- git
+    'NeogitOrg/neogit',
+    dependencies = {
+      'nvim-lua/plenary.nvim', -- required
+      'sindrets/diffview.nvim', -- optional - Diff integration
+
+      -- Only one of these is needed.
+      'nvim-telescope/telescope.nvim', -- optional
+      'ibhagwan/fzf-lua', -- optional
+      'echasnovski/mini.pick', -- optional
+    },
+    config = function()
+      local neogit = require 'neogit'
+
+      neogit.setup {
+        -- Hides the hints at the top of the status buffer
+        disable_hint = false,
+        -- Disables changing the buffer highlights based on where the cursor is.
+        disable_context_highlighting = false,
+        -- Disables signs for sections/items/hunks
+        disable_signs = false,
+        -- Changes what mode the Commit Editor starts in. `true` will leave nvim in normal mode, `false` will change nvim to
+        -- insert mode, and `"auto"` will change nvim to insert mode IF the commit message is empty, otherwise leaving it in
+        -- normal mode.
+        disable_insert_on_commit = 'auto',
+        -- When enabled, will watch the `.git/` directory for changes and refresh the status buffer in response to filesystem
+        -- events.
+        filewatcher = {
+          interval = 1000,
+          enabled = true,
+        },
+        -- "ascii"   is the graph the git CLI generates
+        -- "unicode" is the graph like https://github.com/rbong/vim-flog
+        graph_style = 'ascii',
+        -- Used to generate URL's for branch popup action "pull request".
+        git_services = {
+          ['github.com'] = 'https://github.com/${owner}/${repository}/compare/${branch_name}?expand=1',
+          ['bitbucket.org'] = 'https://bitbucket.org/${owner}/${repository}/pull-requests/new?source=${branch_name}&t=1',
+          ['gitlab.com'] = 'https://gitlab.com/${owner}/${repository}/merge_requests/new?merge_request[source_branch]=${branch_name}',
+          ['azure.com'] = 'https://dev.azure.com/${owner}/_git/${repository}/pullrequestcreate?sourceRef=${branch_name}&targetRef=${target}',
+        },
+        -- Allows a different telescope sorter. Defaults to 'fuzzy_with_index_bias'. The example below will use the native fzf
+        -- sorter instead. By default, this function returns `nil`.
+        telescope_sorter = function()
+          return require('telescope').extensions.fzf.native_fzf_sorter()
+        end,
+        -- Persist the values of switches/options within and across sessions
+        remember_settings = true,
+        -- Scope persisted settings on a per-project basis
+        use_per_project_settings = true,
+        -- Table of settings to never persist. Uses format "Filetype--cli-value"
+        ignored_settings = {
+          'NeogitPushPopup--force-with-lease',
+          'NeogitPushPopup--force',
+          'NeogitPullPopup--rebase',
+          'NeogitCommitPopup--allow-empty',
+          'NeogitRevertPopup--no-edit',
+        },
+        -- Configure highlight group features
+        highlight = {
+          italic = true,
+          bold = true,
+          underline = true,
+        },
+        -- Set to false if you want to be responsible for creating _ALL_ keymappings
+        use_default_keymaps = true,
+        -- Neogit refreshes its internal state after specific events, which can be expensive depending on the repository size.
+        -- Disabling `auto_refresh` will make it so you have to manually refresh the status after you open it.
+        auto_refresh = true,
+        -- Value used for `--sort` option for `git branch` command
+        -- By default, branches will be sorted by commit date descending
+        -- Flag description: https://git-scm.com/docs/git-branch#Documentation/git-branch.txt---sortltkeygt
+        -- Sorting keys: https://git-scm.com/docs/git-for-each-ref#_options
+        sort_branches = '-committerdate',
+        -- Default for new branch name prompts
+        initial_branch_name = '',
+        -- Change the default way of opening neogit
+        kind = 'tab',
+        -- Disable line numbers and relative line numbers
+        disable_line_numbers = true,
+        -- The time after which an output console is shown for slow running commands
+        console_timeout = 2000,
+        -- Automatically show console if a command takes more than console_timeout milliseconds
+        auto_show_console = true,
+        -- Automatically close the console if the process exits with a 0 (success) status
+        auto_close_console = true,
+        status = {
+          show_head_commit_hash = true,
+          recent_commit_count = 10,
+          HEAD_padding = 10,
+          HEAD_folded = false,
+          mode_padding = 3,
+          mode_text = {
+            M = 'modified',
+            N = 'new file',
+            A = 'added',
+            D = 'deleted',
+            C = 'copied',
+            U = 'updated',
+            R = 'renamed',
+            DD = 'unmerged',
+            AU = 'unmerged',
+            UD = 'unmerged',
+            UA = 'unmerged',
+            DU = 'unmerged',
+            AA = 'unmerged',
+            UU = 'unmerged',
+            ['?'] = '',
+          },
+        },
+        commit_editor = {
+          kind = 'tab',
+          show_staged_diff = true,
+          -- Accepted values:
+          -- "split" to show the staged diff below the commit editor
+          -- "vsplit" to show it to the right
+          -- "split_above" Like :top split
+          -- "vsplit_left" like :vsplit, but open to the left
+          -- "auto" "vsplit" if window would have 80 cols, otherwise "split"
+          staged_diff_split_kind = 'split',
+          spell_check = true,
+        },
+        commit_select_view = {
+          kind = 'tab',
+        },
+        commit_view = {
+          kind = 'vsplit',
+          verify_commit = vim.fn.executable 'gpg' == 1, -- Can be set to true or false, otherwise we try to find the binary
+        },
+        log_view = {
+          kind = 'tab',
+        },
+        rebase_editor = {
+          kind = 'auto',
+        },
+        reflog_view = {
+          kind = 'tab',
+        },
+        merge_editor = {
+          kind = 'auto',
+        },
+        tag_editor = {
+          kind = 'auto',
+        },
+        preview_buffer = {
+          kind = 'floating',
+        },
+        popup = {
+          kind = 'split',
+        },
+        signs = {
+          -- { CLOSED, OPENED }
+          hunk = { '', '' },
+          item = { '>', 'v' },
+          section = { '>', 'v' },
+        },
+        -- Each Integration is auto-detected through plugin presence, however, it can be disabled by setting to `false`
+        integrations = {
+          -- If enabled, use telescope for menu selection rather than vim.ui.select.
+          -- Allows multi-select and some things that vim.ui.select doesn't.
+          telescope = nil,
+          -- Neogit only provides inline diffs. If you want a more traditional way to look at diffs, you can use `diffview`.
+          -- The diffview integration enables the diff popup.
+          --
+          -- Requires you to have `sindrets/diffview.nvim` installed.
+          diffview = nil,
+
+          -- If enabled, uses fzf-lua for menu selection. If the telescope integration
+          -- is also selected then telescope is used instead
+          -- Requires you to have `ibhagwan/fzf-lua` installed.
+          fzf_lua = nil,
+
+          -- If enabled, uses mini.pick for menu selection. If the telescope integration
+          -- is also selected then telescope is used instead
+          -- Requires you to have `echasnovski/mini.pick` installed.
+          mini_pick = nil,
+        },
+        sections = {
+          -- Reverting/Cherry Picking
+          sequencer = {
+            folded = false,
+            hidden = false,
+          },
+          untracked = {
+            folded = false,
+            hidden = false,
+          },
+          unstaged = {
+            folded = false,
+            hidden = false,
+          },
+          staged = {
+            folded = false,
+            hidden = false,
+          },
+          stashes = {
+            folded = true,
+            hidden = false,
+          },
+          unpulled_upstream = {
+            folded = true,
+            hidden = false,
+          },
+          unmerged_upstream = {
+            folded = false,
+            hidden = false,
+          },
+          unpulled_pushRemote = {
+            folded = true,
+            hidden = false,
+          },
+          unmerged_pushRemote = {
+            folded = false,
+            hidden = false,
+          },
+          recent = {
+            folded = true,
+            hidden = false,
+          },
+          rebase = {
+            folded = true,
+            hidden = false,
+          },
+        },
+        mappings = {
+          commit_editor = {
+            ['q'] = 'Close',
+            ['<c-c><c-c>'] = 'Submit',
+            ['<c-c><c-k>'] = 'Abort',
+          },
+          commit_editor_I = {
+            ['<c-c><c-c>'] = 'Submit',
+            ['<c-c><c-k>'] = 'Abort',
+          },
+          rebase_editor = {
+            ['p'] = 'Pick',
+            ['r'] = 'Reword',
+            ['e'] = 'Edit',
+            ['s'] = 'Squash',
+            ['f'] = 'Fixup',
+            ['x'] = 'Execute',
+            ['d'] = 'Drop',
+            ['b'] = 'Break',
+            ['q'] = 'Close',
+            ['<cr>'] = 'OpenCommit',
+            ['gk'] = 'MoveUp',
+            ['gj'] = 'MoveDown',
+            ['<c-c><c-c>'] = 'Submit',
+            ['<c-c><c-k>'] = 'Abort',
+            ['[c'] = 'OpenOrScrollUp',
+            [']c'] = 'OpenOrScrollDown',
+          },
+          rebase_editor_I = {
+            ['<c-c><c-c>'] = 'Submit',
+            ['<c-c><c-k>'] = 'Abort',
+          },
+          finder = {
+            ['<cr>'] = 'Select',
+            ['<c-c>'] = 'Close',
+            ['<esc>'] = 'Close',
+            ['<c-n>'] = 'Next',
+            ['<c-p>'] = 'Previous',
+            ['<down>'] = 'Next',
+            ['<up>'] = 'Previous',
+            ['<tab>'] = 'MultiselectToggleNext',
+            ['<s-tab>'] = 'MultiselectTogglePrevious',
+            ['<c-j>'] = 'NOP',
+          },
+          -- Setting any of these to `false` will disable the mapping.
+          popup = {
+            ['?'] = 'HelpPopup',
+            ['A'] = 'CherryPickPopup',
+            ['D'] = 'DiffPopup',
+            ['M'] = 'RemotePopup',
+            ['P'] = 'PushPopup',
+            ['X'] = 'ResetPopup',
+            ['Z'] = 'StashPopup',
+            ['b'] = 'BranchPopup',
+            ['B'] = 'BisectPopup',
+            ['c'] = 'CommitPopup',
+            ['f'] = 'FetchPopup',
+            ['l'] = 'LogPopup',
+            ['m'] = 'MergePopup',
+            ['p'] = 'PullPopup',
+            ['r'] = 'RebasePopup',
+            ['v'] = 'RevertPopup',
+            ['w'] = 'WorktreePopup',
+          },
+          status = {
+            ['k'] = 'MoveUp',
+            ['j'] = 'MoveDown',
+            ['q'] = 'Close',
+            ['o'] = 'OpenTree',
+            ['I'] = 'InitRepo',
+            ['1'] = 'Depth1',
+            ['2'] = 'Depth2',
+            ['3'] = 'Depth3',
+            ['4'] = 'Depth4',
+            ['<tab>'] = 'Toggle',
+            ['x'] = 'Discard',
+            ['s'] = 'Stage',
+            ['S'] = 'StageUnstaged',
+            ['<c-s>'] = 'StageAll',
+            ['K'] = 'Untrack',
+            ['u'] = 'Unstage',
+            ['U'] = 'UnstageStaged',
+            ['$'] = 'CommandHistory',
+            ['Y'] = 'YankSelected',
+            ['<c-r>'] = 'RefreshBuffer',
+            ['<cr>'] = 'GoToFile',
+            ['<s-cr>'] = 'PeekFile',
+            ['<c-v>'] = 'VSplitOpen',
+            ['<c-x>'] = 'SplitOpen',
+            ['<c-t>'] = 'TabOpen',
+            ['{'] = 'GoToPreviousHunkHeader',
+            ['}'] = 'GoToNextHunkHeader',
+            ['[c'] = 'OpenOrScrollUp',
+            [']c'] = 'OpenOrScrollDown',
+            ['<c-k>'] = 'PeekUp',
+            ['<c-j>'] = 'PeekDown',
+          },
+        },
+      }
+      vim.keymap.set('n', '<leader>v', '<cmd>Neogit<CR>', { desc = 'Neogit, git status' })
+    end,
+  },
   { -- Autoformat
     'stevearc/conform.nvim',
     event = { 'BufWritePre' },
     cmd = { 'ConformInfo' },
     keys = {
       {
-        '<leader>f',
+        '<leader>lf',
         function()
           require('conform').format { async = true, lsp_format = 'fallback' }
         end,
@@ -779,9 +1878,13 @@ require('lazy').setup({
 
           -- If you prefer more traditional completion keymaps,
           -- you can uncomment the following lines
-          --['<CR>'] = cmp.mapping.confirm { select = true },
-          --['<Tab>'] = cmp.mapping.select_next_item(),
-          --['<S-Tab>'] = cmp.mapping.select_prev_item(),
+          ['<CR>'] = cmp.mapping.confirm { select = true },
+          ['<Tab>'] = cmp.mapping.select_next_item(),
+          ['<S-Tab>'] = cmp.mapping.select_prev_item(),
+
+          -- emacs friendly
+          ['<M-n>'] = cmp.mapping.select_next_item(),
+          ['<M-p>'] = cmp.mapping.select_prev_item(),
 
           -- Manually trigger a completion from nvim-cmp.
           --  Generally you don't need this, because nvim-cmp will display
@@ -841,7 +1944,51 @@ require('lazy').setup({
       vim.cmd.hi 'Comment gui=none'
     end,
   },
+  {
+    'NTBBloodbath/doom-one.nvim',
 
+    -- priority = 1000, -- Make sure to load this before all the other start plugins.
+    -- init = function()
+    --   -- Load the colorscheme here.
+    --   -- Like many other themes, this one has different styles, and you could load
+    --   -- any other, such as 'tokyonight-storm', 'tokyonight-moon', or 'tokyonight-day'.
+    --   vim.cmd.colorscheme 'tokyonight-night'
+    --
+    --   -- You can configure highlights by doing something like:
+    --   vim.cmd.hi 'Comment gui=none'
+    -- end,
+    config = function()
+      -- Add color to cursor
+      vim.g.doom_one_cursor_coloring = false
+      -- Set :terminal colors
+      vim.g.doom_one_terminal_colors = true
+      -- Enable italic comments
+      vim.g.doom_one_italic_comments = false
+      -- Enable TS support
+      vim.g.doom_one_enable_treesitter = true
+      -- Color whole diagnostic text or only underline
+      vim.g.doom_one_diagnostics_text_color = false
+      -- Enable transparent background
+      vim.g.doom_one_transparent_background = false
+
+      -- Pumblend transparency
+      vim.g.doom_one_pumblend_enable = false
+      vim.g.doom_one_pumblend_transparency = 20
+
+      -- Plugins integration
+      vim.g.doom_one_plugin_neorg = true
+      vim.g.doom_one_plugin_barbar = false
+      vim.g.doom_one_plugin_telescope = false
+      vim.g.doom_one_plugin_neogit = true
+      vim.g.doom_one_plugin_nvim_tree = true
+      vim.g.doom_one_plugin_dashboard = true
+      vim.g.doom_one_plugin_startify = true
+      vim.g.doom_one_plugin_whichkey = true
+      vim.g.doom_one_plugin_indent_blankline = true
+      vim.g.doom_one_plugin_vim_illuminate = true
+      vim.g.doom_one_plugin_lspsaga = false
+    end,
+  },
   -- Highlight todo, notes, etc in comments
   { 'folke/todo-comments.nvim', event = 'VimEnter', dependencies = { 'nvim-lua/plenary.nvim' }, opts = { signs = false } },
 
@@ -888,7 +2035,7 @@ require('lazy').setup({
     main = 'nvim-treesitter.configs', -- Sets main module to use for opts
     -- [[ Configure Treesitter ]] See `:help nvim-treesitter`
     opts = {
-      ensure_installed = { 'bash', 'c', 'diff', 'html', 'lua', 'luadoc', 'markdown', 'markdown_inline', 'query', 'vim', 'vimdoc' },
+      ensure_installed = { 'bash', 'c', 'diff', 'html', 'lua', 'luadoc', 'markdown', 'markdown_inline', 'query', 'vim', 'vimdoc', 'python', 'rust' },
       -- Autoinstall languages that are not installed
       auto_install = true,
       highlight = {
