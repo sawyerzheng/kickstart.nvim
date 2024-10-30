@@ -231,16 +231,16 @@ vim.keymap.set('n', '<leader>a', ':', { desc = 'command mode' })
 vim.keymap.set('n', '<leader>;', ':w<CR>', { desc = 'command mode' })
 vim.keymap.set('n', '<leader>q', ':q<CR>', { desc = 'command mode' })
 -- delete word
-vim.keymap.set('i', '<C-BS>', '<C-W>', { noremap = true, desc = 'delete backword one word' })
-vim.keymap.set('n', '<C-BS>', '<C-\\><C-i><C-W>', { noremap = true })
-vim.keymap.set('i', '<M-d>', '<C-\\><C-O>de', { noremap = true, desc = 'delete forward one word' })
+vim.keymap.set({ 'i', 'x' }, '<C-BS>', '<C-w>', { noremap = true, desc = 'delete backward one word' })
+vim.keymap.set('n', '<C-BS>', 'db', { noremap = true, desc = 'delete backward word' })
+vim.keymap.set({ 'i', 'x' }, '<M-d>', '<C-\\><C-O>de', { noremap = true, desc = 'delete forward one word' })
 vim.keymap.set('n', '<M-d>', 'de', { noremap = true, desc = 'delete forward one word' })
 -- kill buffer
 vim.keymap.set('n', '<leader>u', '<cmd>bd<CR>', { desc = 'Kill buffer' })
 -- redo
 vim.keymap.set('n', 'U', '<cmd>redo<CR>', { desc = 'redo' })
 -- disable q command, recording
-vim.keymap.set('n', 'q', '<Nop>', { noremap = true, silent = true })
+-- vim.keymap.set('n', 'q', '<Nop>', { noremap = true, silent = true })
 -- kill window
 vim.keymap.set('n', '\\', '<C-w>c', { desc = 'kill window, not kill buffer' })
 -- max current window
@@ -311,7 +311,7 @@ require('lazy').setup({
   -- after the plugin has been loaded:
   --  config = function() ... end
 
-  { -- Useful plugin to show you pending keybinds.
+  {                     -- Useful plugin to show you pending keybinds.
     'folke/which-key.nvim',
     event = 'VimEnter', -- Sets the loading event to 'VimEnter'
     opts = {
@@ -354,13 +354,13 @@ require('lazy').setup({
 
       -- Document existing key chains
       spec = {
-        { '<leader>c', group = '[C]ode', mode = { 'n', 'x' } },
+        { '<leader>c', group = '[C]ode',        mode = { 'n', 'x' } },
         { '<leader>d', group = '[D]ocument' },
         { '<leader>r', group = '[R]ename' },
         { '<leader>s', group = '[S]earch' },
         { '<leader>w', group = '[W]orkspace' },
         { '<leader>t', group = '[T]oggle' },
-        { '<leader>h', group = 'Git [H]unk', mode = { 'n', 'v' } },
+        { '<leader>h', group = 'Git [H]unk',    mode = { 'n', 'v' } },
         { '<leader>l', group = 'app[L]ications' },
       },
     },
@@ -404,61 +404,108 @@ require('lazy').setup({
       { 'nvim-telescope/telescope-ui-select.nvim' },
 
       -- Useful for getting pretty icons, but requires a Nerd Font.
-      { 'nvim-tree/nvim-web-devicons', enabled = vim.g.have_nerd_font },
+      { 'nvim-tree/nvim-web-devicons',            enabled = vim.g.have_nerd_font },
+      -- {
+      --   'nvim-telescope/telescope-project.nvim',
+      --   config = function()
+      --     local project_actions = require 'telescope._extensions.project.actions'
+      --     require('telescope').setup {
+      --       extensions = {
+      --         project = {
+      --           base_dirs = {
+      --             '~/source',
+      --             -- { '~/dev/src2' },
+      --             -- { '~/dev/src3', max_depth = 4 },
+      --             -- { path = '~/dev/src4' },
+      --             -- { path = '~/dev/src5', max_depth = 2 },
+      --           },
+      --           hidden_files = true, -- default: false
+      --           theme = 'dropdown',
+      --           order_by = 'asc',
+      --           search_by = 'title',
+      --           sync_with_nvim_tree = true, -- default false
+      --           -- default for on_project_selected = find project files
+      --           on_project_selected = function(prompt_bufnr)
+      --             -- Do anything you want in here. For example:
+      --             project_actions.change_working_directory(prompt_bufnr, false)
+      --             require('harpoon.ui').nav_file(1)
+      --           end,
+      --           mappings = {
+      --             n = {
+      --               ['d'] = project_actions.delete_project,
+      --               ['r'] = project_actions.rename_project,
+      --               ['c'] = project_actions.add_project,
+      --               ['C'] = project_actions.add_project_cwd,
+      --               ['f'] = project_actions.find_project_files,
+      --               ['b'] = project_actions.browse_project_files,
+      --               ['s'] = project_actions.search_in_project_files,
+      --               ['R'] = project_actions.recent_project_files,
+      --               ['w'] = project_actions.change_working_directory,
+      --               ['o'] = project_actions.next_cd_scope,
+      --             },
+      --             i = {
+      --               ['<c-d>'] = project_actions.delete_project,
+      --               ['<c-v>'] = project_actions.rename_project,
+      --               ['<c-a>'] = project_actions.add_project,
+      --               ['<c-A>'] = project_actions.add_project_cwd,
+      --               ['<c-f>'] = project_actions.find_project_files,
+      --               ['<c-b>'] = project_actions.browse_project_files,
+      --               ['<c-s>'] = project_actions.search_in_project_files,
+      --               ['<c-r>'] = project_actions.recent_project_files,
+      --               ['<c-l>'] = project_actions.change_working_directory,
+      --               ['<c-o>'] = project_actions.next_cd_scope,
+      --               ['<c-w>'] = project_actions.change_workspace,
+      --             },
+      --           },
+      --         },
+      --       },
+      --     }
+      --   end,
+      -- },
+      --
+      -- projects
       {
-        'nvim-telescope/telescope-project.nvim',
+        'ahmedkhalf/project.nvim',
         config = function()
-          local project_actions = require 'telescope._extensions.project.actions'
-          require('telescope').setup {
-            extensions = {
-              project = {
-                base_dirs = {
-                  '~/source',
-                  -- { '~/dev/src2' },
-                  -- { '~/dev/src3', max_depth = 4 },
-                  -- { path = '~/dev/src4' },
-                  -- { path = '~/dev/src5', max_depth = 2 },
-                },
-                hidden_files = true, -- default: false
-                theme = 'dropdown',
-                order_by = 'asc',
-                search_by = 'title',
-                sync_with_nvim_tree = true, -- default false
-                -- default for on_project_selected = find project files
-                on_project_selected = function(prompt_bufnr)
-                  -- Do anything you want in here. For example:
-                  project_actions.change_working_directory(prompt_bufnr, false)
-                  require('harpoon.ui').nav_file(1)
-                end,
-                mappings = {
-                  n = {
-                    ['d'] = project_actions.delete_project,
-                    ['r'] = project_actions.rename_project,
-                    ['c'] = project_actions.add_project,
-                    ['C'] = project_actions.add_project_cwd,
-                    ['f'] = project_actions.find_project_files,
-                    ['b'] = project_actions.browse_project_files,
-                    ['s'] = project_actions.search_in_project_files,
-                    ['R'] = project_actions.recent_project_files,
-                    ['w'] = project_actions.change_working_directory,
-                    ['o'] = project_actions.next_cd_scope,
-                  },
-                  i = {
-                    ['<c-d>'] = project_actions.delete_project,
-                    ['<c-v>'] = project_actions.rename_project,
-                    ['<c-a>'] = project_actions.add_project,
-                    ['<c-A>'] = project_actions.add_project_cwd,
-                    ['<c-f>'] = project_actions.find_project_files,
-                    ['<c-b>'] = project_actions.browse_project_files,
-                    ['<c-s>'] = project_actions.search_in_project_files,
-                    ['<c-r>'] = project_actions.recent_project_files,
-                    ['<c-l>'] = project_actions.change_working_directory,
-                    ['<c-o>'] = project_actions.next_cd_scope,
-                    ['<c-w>'] = project_actions.change_workspace,
-                  },
-                },
-              },
-            },
+          require('project_nvim').setup {
+            -- Manual mode doesn't automatically change your root directory, so you have
+            -- the option to manually do so using `:ProjectRoot` command.
+            manual_mode = false,
+
+            -- Methods of detecting the root directory. **"lsp"** uses the native neovim
+            -- lsp, while **"pattern"** uses vim-rooter like glob pattern matching. Here
+            -- order matters: if one is not detected, the other is used as fallback. You
+            -- can also delete or rearangne the detection methods.
+            detection_methods = { 'lsp', 'pattern' },
+
+            -- All the patterns used to detect root dir, when **"pattern"** is in
+            -- detection_methods
+            patterns = { '.git', '_darcs', '.hg', '.bzr', '.svn', 'Makefile', 'package.json' },
+
+            -- Table of lsp clients to ignore by name
+            -- eg: { "efm", ... }
+            ignore_lsp = {},
+
+            -- Don't calculate root dir on specific directories
+            -- Ex: { "~/.cargo/*", ... }
+            exclude_dirs = { '~/*', '~/Downloads/', '~/Documents/*', '~/Desktop/*pick_venv' },
+
+            -- Show hidden files in telescope
+            show_hidden = false,
+
+            -- When set to false, you will get a message when project.nvim changes your
+            -- directory.
+            silent_chdir = true,
+
+            -- What scope to change the directory, valid options are
+            -- * global (default)
+            -- * tab
+            -- * win
+            scope_chdir = 'global',
+
+            -- Path where project.nvim will store the project history for use in
+            -- telescope
+            datapath = vim.fn.stdpath 'data',
           }
         end,
       },
@@ -521,7 +568,7 @@ require('lazy').setup({
       -- Enable Telescope extensions if they are installed
       pcall(require('telescope').load_extension, 'fzf')
       pcall(require('telescope').load_extension, 'ui-select')
-      pcall(require('telescope').load_extension, 'project')
+      pcall(require('telescope').load_extension, 'projects')
       pcall(require('telescope').load_extension 'aerial')
 
       -- See `:help telescope.builtin`
@@ -537,7 +584,7 @@ require('lazy').setup({
       vim.keymap.set('n', '<leader>sr', builtin.oldfiles, { desc = '[S]earch Recent Files ("." for repeat)' })
       vim.keymap.set('n', '<leader>f', builtin.buffers, { desc = 'Telescope buffers' })
       vim.keymap.set('n', '<leader>p', function()
-        require('telescope').extensions.project.project {}
+        require('telescope').extensions.projects.projects {}
       end, { desc = '[P]roject' })
       vim.keymap.set('n', '<leader>tT', builtin.colorscheme, { desc = '[T]oggle color[T]hemes' })
       vim.keymap.set('n', '<leader><leader>', builtin.buffers, { desc = '[ ] Find existing buffers' })
@@ -602,7 +649,7 @@ require('lazy').setup({
 
       -- Useful status updates for LSP.
       -- NOTE: `opts = {}` is the same as calling `require('fidget').setup({})`
-      { 'j-hui/fidget.nvim', opts = {} },
+      { 'j-hui/fidget.nvim',       opts = {} },
 
       -- Allows extra capabilities provided by nvim-cmp
       'hrsh7th/cmp-nvim-lsp',
@@ -822,6 +869,28 @@ require('lazy').setup({
     dependencies = { 'nvim-lua/plenary.nvim' },
   },
   {
+    'AckslD/swenv.nvim',
+    dependencies = { 'nvim-lua/plenary.nvim' },
+    lazy = false,
+    opts = {},
+    config = function()
+      require('swenv').setup {
+        -- Should return a list of tables with a `name` and a `path` entry each.
+        -- Gets the argument `venvs_path` set below.
+        -- By default just lists the entries in `venvs_path`.
+        get_venvs = function(venvs_path)
+          return require('swenv.api').get_venvs(venvs_path)
+        end,
+        -- Path passed to `get_venvs`.
+        venvs_path = vim.fn.expand '~/venvs',
+        -- Something to do after setting an environment, for example call vim.cmd.LspRestart
+        post_set_venv = nil,
+      }
+      vim.keymap.set('n', '<leader>lVs', require('swenv.api').pick_venv, { desc = 'pick env' })
+      vim.keymap.set('n', '<leader>lVg', require('swenv.api').get_current_venv, { desc = 'pick env' })
+    end,
+  },
+  {
     'linux-cultist/venv-selector.nvim',
     dependencies = {
       'neovim/nvim-lspconfig',
@@ -867,27 +936,27 @@ require('lazy').setup({
     config = function()
       vim.o.sessionoptions = 'blank,buffers,curdir,folds,help,tabpages,winsize,winpos,terminal,localoptions'
       require('auto-session').setup {
-        enabled = true, -- Enables/disables auto creating, saving and restoring
+        enabled = true,                                   -- Enables/disables auto creating, saving and restoring
         root_dir = vim.fn.stdpath 'data' .. '/sessions/', -- Root dir where sessions will be stored
-        auto_save = true, -- Enables/disables auto saving session on exit
-        auto_restore = true, -- Enables/disables auto restoring session on start
-        auto_create = true, -- Enables/disables auto creating new session files. Can take a function that should return true/false if a new session file should be created or not
-        suppressed_dirs = nil, -- Suppress session restore/create in certain directories
-        allowed_dirs = nil, -- Allow session restore/create in certain directories
-        auto_restore_last_session = false, -- On startup, loads the last saved session if session for cwd does not exist
-        use_git_branch = false, -- Include git branch name in session name
-        lazy_support = true, -- Automatically detect if Lazy.nvim is being used and wait until Lazy is done to make sure session is restored correctly. Does nothing if Lazy isn't being used. Can be disabled if a problem is suspected or for debugging
-        bypass_save_filetypes = nil, -- List of file types to bypass auto save when the only buffer open is one of the file types listed, useful to ignore dashboards
-        close_unsupported_windows = true, -- Close windows that aren't backed by normal file before autosaving a session
-        args_allow_single_directory = true, -- Follow normal sesion save/load logic if launched with a single directory as the only argument
-        args_allow_files_auto_save = false, -- Allow saving a session even when launched with a file argument (or multiple files/dirs). It does not load any existing session first. While you can just set this to true, you probably want to set it to a function that decides when to save a session when launched with file args. See documentation for more detail
-        continue_restore_on_error = true, -- Keep loading the session even if there's an error
-        cwd_change_handling = false, -- Follow cwd changes, saving a session before change and restoring after
-        log_level = 'error', -- Sets the log level of the plugin (debug, info, warn, error).
+        auto_save = true,                                 -- Enables/disables auto saving session on exit
+        auto_restore = true,                              -- Enables/disables auto restoring session on start
+        auto_create = true,                               -- Enables/disables auto creating new session files. Can take a function that should return true/false if a new session file should be created or not
+        suppressed_dirs = nil,                            -- Suppress session restore/create in certain directories
+        allowed_dirs = nil,                               -- Allow session restore/create in certain directories
+        auto_restore_last_session = false,                -- On startup, loads the last saved session if session for cwd does not exist
+        use_git_branch = false,                           -- Include git branch name in session name
+        lazy_support = true,                              -- Automatically detect if Lazy.nvim is being used and wait until Lazy is done to make sure session is restored correctly. Does nothing if Lazy isn't being used. Can be disabled if a problem is suspected or for debugging
+        bypass_save_filetypes = nil,                      -- List of file types to bypass auto save when the only buffer open is one of the file types listed, useful to ignore dashboards
+        close_unsupported_windows = true,                 -- Close windows that aren't backed by normal file before autosaving a session
+        args_allow_single_directory = true,               -- Follow normal sesion save/load logic if launched with a single directory as the only argument
+        args_allow_files_auto_save = false,               -- Allow saving a session even when launched with a file argument (or multiple files/dirs). It does not load any existing session first. While you can just set this to true, you probably want to set it to a function that decides when to save a session when launched with file args. See documentation for more detail
+        continue_restore_on_error = true,                 -- Keep loading the session even if there's an error
+        cwd_change_handling = false,                      -- Follow cwd changes, saving a session before change and restoring after
+        log_level = 'error',                              -- Sets the log level of the plugin (debug, info, warn, error).
 
         session_lens = {
           load_on_setup = true, -- Initialize on startup (requires Telescope)
-          theme_conf = { -- Pass through for Telescope theme options
+          theme_conf = {        -- Pass through for Telescope theme options
             -- layout_config = { -- As one example, can change width/height of picker
             --   width = 0.8,    -- percent of window
             --   height = 0.5,
@@ -904,7 +973,7 @@ require('lazy').setup({
 
           session_control = {
             control_dir = vim.fn.stdpath 'data' .. '/auto_session/', -- Auto session control dir, for control files, like alternating between two sessions with session-lens
-            control_filename = 'session_control.json', -- File name of the session control file
+            control_filename = 'session_control.json',               -- File name of the session control file
           },
         },
       }
@@ -926,7 +995,7 @@ require('lazy').setup({
         'n',
         '<S-F6>',
         '<cmd>CompilerStop<cr>' -- (Optional, to dispose all tasks before redo)
-          .. '<cmd>CompilerRedo<cr>',
+        .. '<cmd>CompilerRedo<cr>',
         { noremap = true, silent = true }
       )
 
@@ -991,6 +1060,13 @@ require('lazy').setup({
           dotfiles = true,
         },
         on_attach = my_on_attach,
+        -- work together with projects.nvim
+        sync_root_with_cwd = true,
+        respect_buf_cwd = true,
+        update_focused_file = {
+          enable = true,
+          update_root = true,
+        },
       }
     end,
     vim.keymap.set('n', '<leader>tt', '<cmd>NvimTreeToggle<CR>', { desc = '[T]oggle nvim-[T]ree' }),
@@ -1001,7 +1077,7 @@ require('lazy').setup({
     opts = {},
     config = function()
       vim.o.foldcolumn = '1' -- '0' is not bad
-      vim.o.foldlevel = 99 -- Using ufo provider need a large value, feel free to decrease the value
+      vim.o.foldlevel = 99   -- Using ufo provider need a large value, feel free to decrease the value
       vim.o.foldlevelstart = 99
       vim.o.foldenable = true
 
@@ -1035,7 +1111,7 @@ require('lazy').setup({
   --      vim.keymap.del({ 'x', 'o' }, 'X')
   --    end,
   --  },
-  { 'tpope/vim-repeat', event = 'VeryLazy' },
+  { 'tpope/vim-repeat',     event = 'VeryLazy' },
   {
     'windwp/nvim-autopairs',
     event = 'InsertEnter',
@@ -1441,13 +1517,13 @@ require('lazy').setup({
   { -- git
     'NeogitOrg/neogit',
     dependencies = {
-      'nvim-lua/plenary.nvim', -- required
+      'nvim-lua/plenary.nvim',  -- required
       'sindrets/diffview.nvim', -- optional - Diff integration
 
       -- Only one of these is needed.
       'nvim-telescope/telescope.nvim', -- optional
-      'ibhagwan/fzf-lua', -- optional
-      'echasnovski/mini.pick', -- optional
+      'ibhagwan/fzf-lua',              -- optional
+      'echasnovski/mini.pick',         -- optional
     },
     config = function()
       local neogit = require 'neogit'
@@ -2035,7 +2111,24 @@ require('lazy').setup({
     main = 'nvim-treesitter.configs', -- Sets main module to use for opts
     -- [[ Configure Treesitter ]] See `:help nvim-treesitter`
     opts = {
-      ensure_installed = { 'bash', 'c', 'diff', 'html', 'lua', 'luadoc', 'markdown', 'markdown_inline', 'query', 'vim', 'vimdoc', 'python', 'rust' },
+      ensure_installed = {
+        'bash',
+        'c',
+        'diff',
+        'html',
+        'lua',
+        'luadoc',
+        'markdown',
+        'markdown_inline',
+        'query',
+        'vim',
+        'vimdoc',
+        'python',
+        'rust',
+        'html',
+        'css',
+        'javascript',
+      },
       -- Autoinstall languages that are not installed
       auto_install = true,
       highlight = {
